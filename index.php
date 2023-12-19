@@ -25,8 +25,12 @@ while (!feof($arquivo)) {
     $tempoVolta = $partes[3];
     $velocidadeMediaVolta = $partes[4];
 
-    // Parse o nome do piloto
-    $nomePiloto = substr($codigoPiloto, 4);
+    // Procura o nome do piloto corretamente usando uma expressão regular
+    preg_match('/\d+ – (.+?)\s/', $linha, $matches);
+    // Recupera parte da expressão regular que está o nome
+    $nomePiloto = $matches[1];
+
+    // Obtém apenas o código do piloto
     $codigoPiloto = substr($codigoPiloto, 0, 3);
 
     // Verifica se o piloto já está nos resultados da corrida
@@ -46,9 +50,7 @@ while (!feof($arquivo)) {
     $resultadosCorrida[$codigoPiloto]['numeroVoltasCompletadas']++;
 
     // Calcula o tempo total de corrida
-    if ($resultadosCorrida[$codigoPiloto]['numeroVoltasCompletadas'] == 4) {
-        $resultadosCorrida[$codigoPiloto]['tempoTotalCorrida'] += floatval($tempoVolta);
-    } else {
+    if ($resultadosCorrida[$codigoPiloto]['numeroVoltasCompletadas'] <= 4) {
         $resultadosCorrida[$codigoPiloto]['tempoTotalCorrida'] += floatval($tempoVolta);
     }
 
@@ -61,11 +63,18 @@ while (!feof($arquivo)) {
 // Fecha o arquivo
 fclose($arquivo);
 
-// Imprime os resultados da corrida
-foreach ($resultadosCorrida as $piloto) {
+// Ordena os resultados pela quantidade de voltas completadas e tempo total de corrida
+usort($resultadosCorrida, function ($a, $b) {
+    if ($a['numeroVoltasCompletadas'] == $b['numeroVoltasCompletadas']) {
+        return $a['tempoTotalCorrida'] <=> $b['tempoTotalCorrida'];
+    }
+    return $b['numeroVoltasCompletadas'] <=> $a['numeroVoltasCompletadas'];
+});
 
+// Imprime os resultados da corrida
+foreach ($resultadosCorrida as $posicao => $piloto) {
     // Adiciona uma posição de chegada
-    $piloto['posicaoChegada'] = count($resultadosCorrida) - $piloto['numeroVoltasCompletadas'];
+    $piloto['posicaoChegada'] = $posicao + 1;
 
     // Exibe os resultados
     echo "Posição de chegada: " . $piloto['posicaoChegada'] . "<br>";
