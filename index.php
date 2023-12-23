@@ -1,15 +1,13 @@
 <?php
 
-// Converte o tempo de volta no formato mm:ss.sss para segundos
+define('MIN_VOLTAS_PARA_EXIBICAO', 4);
+
 function converterTempoVoltaParaSegundos($tempoVolta)
 {
-    $partesTempo = explode(":", $tempoVolta);
-    $minutos = (int)$partesTempo[0];
-    $segundos = (float)$partesTempo[1];
-    return $minutos * 60 + $segundos;
+    list($minutos, $segundos) = explode(":", $tempoVolta);
+    return (int)$minutos * 60 + (float)$segundos;
 }
 
-// Formata o tempo para o formato mm:ss.sss
 function formatarTempo($tempoEmSegundos)
 {
     $minutos = floor($tempoEmSegundos / 60);
@@ -17,11 +15,19 @@ function formatarTempo($tempoEmSegundos)
     return sprintf("%02d:%06.3f", $minutos, $segundos);
 }
 
+function lerArquivoCorrida($caminhoArquivo)
+{
+    $linhas = file($caminhoArquivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+    // Pula a primeira linha
+    array_shift($linhas);
+
+    return $linhas;
+}
+
 // Abre o arquivo de log
 $arquivo = fopen("log.txt", "r") or die("Não foi possível abrir o arquivo!");
-
-// Pula a primeira linha
-fgets($arquivo);
+$linhas = lerArquivoCorrida("log.txt");
 
 // Inicializa um array para armazenar os resultados da corrida
 $resultadosCorrida = [];
@@ -29,13 +35,21 @@ $resultadosCorrida = [];
 // Inicializa um array para armazenar o número total de voltas de cada piloto
 $totalVoltas = [];
 
+// Inicializa uma variável para armazenar a melhor volta da corrida
+$melhorVoltaCorrida = PHP_FLOAT_MAX;
+
+// Inicializa um array para armazenar a velocidade média de cada piloto
+$velocidadeMediaPiloto = [];
+
+// Inicializa uma variável para armazenar o tempo total de corrida
+$tempoTotalCorrida = 0;
+
 // Lê o arquivo linha por linha
-while (!feof($arquivo)) {
+foreach ($linhas as $linha) {
     // Obtém a linha atual
-    $linha = fgets($arquivo);
+    $dados = explode(" ", $linha);
 
     // Verifica se a linha possui dados suficientes antes de continuar
-    $dados = explode(" ", $linha);
     if (count($dados) < 7) {
         continue;
     }
@@ -44,6 +58,7 @@ while (!feof($arquivo)) {
     $codigoPiloto = $dados[1];
     $numeroVolta = $dados[4];
     $tempoVolta = $dados[5];
+    $velocidadeMediaPorVolta = $dados[6];
 
     // Verifica se o piloto já está nos resultados da corrida
     if (!isset($resultadosCorrida[$codigoPiloto])) {
@@ -60,10 +75,14 @@ while (!feof($arquivo)) {
             'nomePiloto' => $nomePiloto,
             'numeroVoltasCompletadas' => 0,
             'tempoTotalCorrida' => 0,
+            'melhorVolta' => PHP_FLOAT_MAX,
+            'velocidadeMedia' => 0,
         ];
 
         // Inicializa o número total de voltas do piloto
         $totalVoltas[$codigoPiloto] = 0;
+        // Inicializa a velocidade média do piloto como zero
+        $velocidadeMediaPiloto[$codigoPiloto] = 0;
     }
 
     // Atualiza os dados do piloto
@@ -75,39 +94,79 @@ while (!feof($arquivo)) {
     // Calcula o tempo total de corrida
     $tempoVoltaNumerico = converterTempoVoltaParaSegundos($tempoVolta);
     $resultadosCorrida[$codigoPiloto]['tempoTotalCorrida'] += $tempoVoltaNumerico;
+
+    // Atualiza a melhor volta de cada piloto
+    if ($tempoVoltaNumerico < $resultadosCorrida[$codigoPiloto]['melhorVolta']) {
+        $resultadosCorrida[$codigoPiloto]['melhorVolta'] = $tempoVoltaNumerico;
+    }
+
+    // Atualiza a melhor volta da corrida
+    if ($tempoVoltaNumerico < $melhorVoltaCorrida) {
+        $melhorVoltaCorrida = $tempoVoltaNumerico;
+    }
+
+    // Atualiza a velocidade média de cada piloto
+    if ($tempoVoltaNumerico > 0) {
+        $velocidadeMediaPorVolta = (float)$velocidadeMediaPorVolta;
+        $velocidadeMediaPiloto[$codigoPiloto] += $velocidadeMediaPorVolta;
+    }
+}
+
+// Calcula a velocidade média final de cada piloto
+foreach ($resultadosCorrida as $codigoPiloto => $piloto) {
+    $numeroVoltas = $piloto['numeroVoltasCompletadas'];
+
+    if ($numeroVoltas > 0) {
+        // Calcula a velocidade média final dividindo pela quantidade total de voltas
+        $resultadosCorrida[$codigoPiloto]['velocidadeMedia'] = $velocidadeMediaPiloto[$codigoPiloto] / $numeroVoltas;
+    }
+}
+
+// Ordena os resultados pela quantidade de voltas completadas e tempo total de corrida
+usort($resultadosCorrida, function ($a, $b) {
+    $aVoltas = $a['numeroVoltasCompletadas'];
+    $bVoltas = $b['numeroVoltasCompletadas'];
+
+    if ($aVoltas == $bVoltas) {
+        $aTempo = $a['tempoTotalCorrida'];
+        $bTempo = $b['tempoTotalCorrida'];
+        return $aTempo <=> $bTempo;
+    }
+
+    return $bVoltas <=> $aVoltas;
+});
+
+// Encontra o vencedor da corrida (primeiro colocado)
+$vencedor = reset($resultadosCorrida);
+
+foreach ($resultadosCorrida as $posicao => $piloto) {
+    // Adiciona uma posição de chegada
+    $resultadosCorrida[$posicao]['posicaoChegada'] = $posicao + 1;
+
+    // Exibe os resultados de todos os pilotos que completaram pelo menos MIN_VOLTAS_PARA_EXIBICAO voltas
+    // ou exibe o último piloto mesmo que não tenha completado MIN_VOLTAS_PARA_EXIBICAO voltas
+    if ($piloto['numeroVoltasCompletadas'] >= MIN_VOLTAS_PARA_EXIBICAO || $posicao === count($resultadosCorrida) - 1) {
+        // Calcula o tempo que cada piloto chegou após o primeiro
+        $tempoAposVencedor = $piloto['tempoTotalCorrida'] - $resultadosCorrida[0]['tempoTotalCorrida'];
+
+        // Exibe os resultados
+        echo "<br>PPosição de chegada: " . $resultadosCorrida[$posicao]['posicaoChegada'] . "<br>";
+        echo "Código do piloto: " . $resultadosCorrida[$posicao]['codigoPiloto'] . "<br>";
+        echo "Nome do piloto: " . $resultadosCorrida[$posicao]['nomePiloto'] . "<br>";
+        echo "Número de voltas completadas: " . $resultadosCorrida[$posicao]['numeroVoltasCompletadas'] . "<br>";
+        echo "Tempo total de corrida: " . formatarTempo($resultadosCorrida[$posicao]['tempoTotalCorrida']) . "<br>";
+        echo "Melhor volta: " . formatarTempo($resultadosCorrida[$posicao]['melhorVolta']) . "<br>";
+        echo "Velocidade média: " . $resultadosCorrida[$posicao]['velocidadeMedia'] . " km/h<br>";
+
+        if ($posicao === count($resultadosCorrida) - 1) {
+            echo "Abandonou a corrida<br>";
+        } else {
+            echo "Tempo após o vencedor: " . formatarTempo($tempoAposVencedor) . "<br>";
+        }
+        echo "<br><br>";
+    }
 }
 
 // Fecha o arquivo
 fclose($arquivo);
-
-// Transforma $resultadosCorrida em um array simples
-$resultadosSimples = array_values($resultadosCorrida);
-
-// Ordena os resultados pela quantidade de voltas completadas e tempo total de corrida
-usort($resultadosCorrida, function ($a, $b) {
-    if ($a['numeroVoltasCompletadas'] == $b['numeroVoltasCompletadas']) {
-        return $a['tempoTotalCorrida'] <=> $b['tempoTotalCorrida'];
-    }
-    return $b['numeroVoltasCompletadas'] <=> $a['numeroVoltasCompletadas'];
-});
-
-// Imprime os resultados da corrida
-echo "<br>Classificação:<br>";
-echo "<br>Posição | Código | Nome | Voltas | Tempo Total<br>";
-foreach ($resultadosCorrida as $posicao => $piloto) {
-    // Adiciona uma posição de chegada
-    $piloto['posicaoChegada'] = $posicao + 1;
-
-    // Exibe os resultados de todos os pilotos que completaram pelo menos 4 voltas
-    if ($totalVoltas[$piloto['codigoPiloto']] > 0) {
-
-
-        // Exibe os resultados
-        echo "<br>Posição de chegada: " . $piloto['posicaoChegada'] . "<br>";
-        echo "Código do piloto: " . $piloto['codigoPiloto'] . "<br>";
-        echo "Nome do piloto: " . $piloto['nomePiloto'] . "<br>";
-        echo "Número de voltas completadas: " . $piloto['numeroVoltasCompletadas'] . "<br>";
-        echo "Tempo total de corrida: " . formatarTempo($piloto['tempoTotalCorrida']) . "<br>";
-        echo "<br><br>";
-    }
-}
+?>
