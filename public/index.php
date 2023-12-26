@@ -1,42 +1,70 @@
-<?php
+<!DOCTYPE html>
+<html lang="en">
 
-require_once '../src/App/Corrida.php';
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados da Corrida</title>
+    <link rel="stylesheet" type="text/css" href="../resources/css/app.css">
+</head>
 
-// Exibir informações dos pilotos.
-foreach ($resultadosCorrida as $posicao => $piloto) {
+<body>
+    <h1>Resultados da Corrida</h1>
 
-     // Define a posição de chegada do piloto.
-     $piloto->posicaoChegada = $posicao + 1;
+    <table>
+        <tr>
+            <th>Posição de chegada</th>
+            <th>Código do piloto</th>
+            <th>Nome do piloto</th>
+            <th>Número de voltas completadas</th>
+            <th>Tempo total de corrida</th>
+            <th>Melhor volta</th>
+            <th>Velocidade média</th>
+            <th>Informações adicionais</th>
+        </tr>
 
-    // Verifica se o piloto completou o número mínimo de voltas ou é o último na corrida.
-    if ($piloto->getNumeroVoltasCompletadas() >= MIN_VOLTAS_PARA_EXIBICAO || $posicao === count($resultadosCorrida) - 1) {       
+        <?php
+        require_once '../src/App/Corrida.php';
 
-        // Exibe informações do piloto.
-        echo "<br>Posição de chegada: " . $piloto->posicaoChegada . "<br>";
-        echo "Código do piloto: " . $piloto->getCodigo() . "<br>";
-        echo "Nome do piloto: " . $piloto->getNome() . "<br>";
-        echo "Número de voltas completadas: " . $piloto->getNumeroVoltasCompletadas() . "<br>";
-        echo "Tempo total de corrida: " . formatarTempo($piloto->getTempoTotalCorrida()) . "<br>";
-        echo "Melhor volta: " . formatarTempo($piloto->getMelhorVolta()) . " (Volta " . $piloto->getNumeroMelhorVolta() . ")<br>";
+        // Exibir informações dos pilotos.
+        foreach ($resultadosCorrida as $posicao => $piloto) {
 
-        // Formata a velocidade média com uma casa decimal e exibe.
-        $velocidadeMediaFormatada = number_format($piloto->getVelocidadeMedia(), 1) . " km/h";
-        echo "Velocidade média: " . $velocidadeMediaFormatada . "<br>";
+            // Define a posição de chegada do piloto.
+            $piloto->posicaoChegada = $posicao + 1;
 
-        // Exibe informações específicas para o vencedor, piloto que abandonou ou outros pilotos.
-        if ($posicao === 0) {
-            echo "Vencedor<br>";
-        } elseif ($posicao === count($resultadosCorrida) - 1) {
-            echo "Piloto abandonou a corrida<br>";
-        } else {
-            // Calcula o tempo do piloto em relação ao vencedor.
-            $tempoAposVencedor = $piloto->getTempoTotalCorrida() - $vencedor->getTempoTotalCorrida();
-            echo "Tempo após o vencedor: " . formatarTempo($tempoAposVencedor) . "<br>";
+            // Verifica se o piloto completou o número mínimo de voltas ou é o último na corrida.
+            if ($piloto->getNumeroVoltasCompletadas() >= MIN_VOLTAS_PARA_EXIBICAO || $posicao === count($resultadosCorrida) - 1) {
+                echo "<tr>";
+                echo "<td>" . $piloto->posicaoChegada . "</td>";
+                echo "<td>" . $piloto->getCodigo() . "</td>";
+                echo "<td>" . $piloto->getNome() . "</td>";
+                echo "<td>" . $piloto->getNumeroVoltasCompletadas() . "</td>";
+                echo "<td>" . formatarTempo($piloto->getTempoTotalCorrida()) . "</td>";
+                echo "<td>" . formatarTempo($piloto->getMelhorVolta()) . " (Volta " . $piloto->getNumeroMelhorVolta() . ")</td>";
+                echo "<td>" . number_format($piloto->getVelocidadeMedia(), 1) . " km/h</td>";
+                echo "<td>";
+
+                if ($posicao === 0) {
+                    echo "<span class='vencedor'>Vencedor</span>";
+                } elseif ($posicao === count($resultadosCorrida) - 1) {
+                    echo "<span class='abandonou'>Piloto abandonou a corrida</span>";
+                } else {
+                    $tempoAposVencedor = $piloto->getTempoTotalCorrida() - $vencedor->getTempoTotalCorrida();
+                    echo "Tempo após o vencedor: <span class='tempo-apos-vencedor'>" . formatarTempo($tempoAposVencedor) . "</span>";
+                }
+
+                echo "</td>";
+                echo "</tr>";
+            }
         }
-        echo "<br><br>";
-    }
-}
+        ?>
+    </table>
 
-// Exibe a melhor volta da corrida.
-echo "Melhor volta da corrida: " . formatarTempo($melhorVoltaCorrida['tempoVolta']) .
-    " (Volta " . $melhorVoltaCorrida['numeroVolta'] . ", Piloto " . $melhorVoltaCorrida['nomePiloto'] . ")<br><br>";
+    <div class="melhor-volta">
+        <strong>Melhor volta da corrida:</strong> <?php echo formatarTempo($melhorVoltaCorrida['tempoVolta']); ?>
+        (Volta <?php echo $melhorVoltaCorrida['numeroVolta']; ?>, Piloto <?php echo $melhorVoltaCorrida['nomePiloto']; ?>)
+    </div>
+
+</body>
+
+</html>
