@@ -1,8 +1,8 @@
 <?php
 
-require_once '../src/App/Piloto.php';
-require_once '../src/App/Arquivo.php';
-require_once '../src/App/Tempo.php';
+require_once 'src/App/Piloto.php';
+require_once 'src/App/Arquivo.php';
+require_once 'src/App/Tempo.php';
 
 /**
  * Define o número mínimo de voltas para exibição.
@@ -16,7 +16,7 @@ define('MIN_VOLTAS_PARA_EXIBICAO', 4);
  *
  * @return array Linhas do arquivo.
  */
-$linhas = lerArquivoCorrida("../log.txt");
+$linhas = lerArquivoCorrida("log.txt");
 
 /**
  * Array para armazenar os resultados da corrida.
