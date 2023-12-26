@@ -16,7 +16,7 @@ Siga as instruções abaixo para configurar o ambiente de desenvolvimento e come
 
 1. Inicie os Serviços do Laragon (ou ambiente de desenvolvimento similar):
 
-   Antes de iniciar o servidor web, certifique-se de ter iniciado os serviços do Laragon. Isso inclui o servidor web (por exemplo, Apache) e o servidor de banco de dados (por exemplo, MySQL).
+   Antes de iniciar o servidor web, certifique-se de ter iniciado os serviços do Laragon.
 
    No Laragon, clique no botão "Start All" no painel do Laragon para iniciar todos os serviços necessários.
 
